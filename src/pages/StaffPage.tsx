@@ -3,6 +3,7 @@ import PageLayout from '@/components/PageLayout';
 import { Edit2, Trash2, Plus, X, IndianRupee } from 'lucide-react';
 import Modal from '@/components/Modal';
 import { motion } from 'framer-motion';
+import { toast } from '@/components/ui/use-toast';
 
 interface StaffMember {
   id: string;
@@ -80,6 +81,8 @@ const StaffPage = () => {
   const [paymentMode, setPaymentMode] = useState('Cash');
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [deleteStaffId, setDeleteStaffId] = useState<string | null>(null);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [paidSoFar, setPaidSoFar] = useState(0);
   
   // Load staff data from localStorage
   useEffect(() => {
@@ -105,8 +108,51 @@ const StaffPage = () => {
   // Calculate totals
   const totalStaff = staffMembers.length;
   const totalMonthlySalaries = staffMembers.reduce((total, staff) => total + staff.salary, 0);
-  const paidSoFar = 0;
   const duesRemaining = totalMonthlySalaries - paidSoFar;
+
+  // Helper to get current salary cycle
+  const getCurrentSalaryCycle = () => {
+    const stored = localStorage.getItem('salaryCycle');
+    return stored ? Number(stored) : 1;
+  };
+
+  // Helper to set/increment salary cycle
+  const incrementSalaryCycle = () => {
+    const current = getCurrentSalaryCycle();
+    localStorage.setItem('salaryCycle', String(current + 1));
+  };
+
+  // On mount, ensure salaryCycle exists and calculate paidSoFar
+  useEffect(() => {
+    if (!localStorage.getItem('salaryCycle')) {
+      localStorage.setItem('salaryCycle', '1');
+    }
+    updatePaidSoFar();
+  }, []);
+
+  // Helper to update paidSoFar
+  const updatePaidSoFar = () => {
+    const savedItems = localStorage.getItem('inventoryItems');
+    const currentCycle = getCurrentSalaryCycle();
+    if (!savedItems) {
+      setPaidSoFar(0);
+      return;
+    }
+    try {
+      const items = JSON.parse(savedItems);
+      const totalPaid = items
+        .filter((item) => item.name && item.name.startsWith('Advance Salary Payment - ') && item.salaryCycle === currentCycle)
+        .reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+      setPaidSoFar(totalPaid);
+    } catch {
+      setPaidSoFar(0);
+    }
+  };
+
+  // Call updatePaidSoFar after every payment
+  useEffect(() => {
+    updatePaidSoFar();
+  }, [staffMembers]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -222,9 +268,35 @@ const StaffPage = () => {
     if (!paymentStaff || !paymentAmount || isNaN(Number(paymentAmount)) || Number(paymentAmount) <= 0) {
       return;
     }
-    // Add payment as an expense in inventoryItems
+
+    // Check if salary is already fully paid
+    const salaryPaid = getSalaryPaid(paymentStaff);
+    const salaryLeft = Math.max(0, paymentStaff.salary - salaryPaid);
+    
+    if (salaryLeft === 0) {
+      toast({
+        title: "Payment Not Allowed",
+        description: "Full salary has already been paid. Please reset salary to make new payments.",
+        variant: "destructive",
+      });
+      closePaymentModal();
+      return;
+    }
+
+    // Check if payment amount exceeds remaining salary
+    if (Number(paymentAmount) > salaryLeft) {
+      toast({
+        title: "Invalid Amount",
+        description: `Payment amount cannot exceed remaining salary of ₹${salaryLeft}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Add payment as an expense in inventoryItems, with salaryCycle
     const today = new Date();
     const formattedDate = today.toLocaleDateString('en-IN');
+    const currentCycle = getCurrentSalaryCycle();
     const newExpense = {
       id: Date.now().toString(),
       name: `Advance Salary Payment - ${paymentStaff.name}`,
@@ -232,8 +304,10 @@ const StaffPage = () => {
       price: Number(paymentAmount),
       paymentMode: paymentMode,
       notes: `Advance salary payment to ${paymentStaff.name} (Role: ${paymentStaff.role})`,
-      date: formattedDate
+      date: formattedDate,
+      salaryCycle: currentCycle,
     };
+
     // Get current inventory items
     const savedItems = localStorage.getItem('inventoryItems');
     let inventoryItems = [];
@@ -244,34 +318,45 @@ const StaffPage = () => {
     }
     inventoryItems.unshift(newExpense); // Add to start
     localStorage.setItem('inventoryItems', JSON.stringify(inventoryItems));
+
+    // Update last paid date
+    setStaffMembers(prev => prev.map(staff => 
+      staff.id === paymentStaff.id 
+        ? { ...staff, lastPaidOn: formattedDate }
+        : staff
+    ));
+
+    // Update paidSoFar
+    updatePaidSoFar();
+
+    toast({
+      title: "Payment Successful",
+      description: `₹${paymentAmount} has been paid to ${paymentStaff.name}`,
+    });
+
     closePaymentModal();
   };
 
-  // Helper to get salary paid for a staff member
+  // Helper to get salary paid for a staff member (only for current cycle)
   const getSalaryPaid = (staff: StaffMember) => {
     const savedItems = localStorage.getItem('inventoryItems');
+    const currentCycle = getCurrentSalaryCycle();
     if (!savedItems) return 0;
     try {
       const items = JSON.parse(savedItems);
       return items
-        .filter((item: any) => item.name === `Advance Salary Payment - ${staff.name}`)
+        .filter((item: any) => item.name === `Advance Salary Payment - ${staff.name}` && item.salaryCycle === currentCycle)
         .reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0);
     } catch {
       return 0;
     }
   };
 
+  // Reset salary: increment cycle and force UI refresh
   const handleResetSalary = () => {
-    const savedItems = localStorage.getItem('inventoryItems');
-    if (!savedItems) return;
-    try {
-      const items = JSON.parse(savedItems);
-      // Remove all advance salary payment entries
-      const filtered = items.filter((item: any) => !item.name.startsWith('Advance Salary Payment - '));
-      localStorage.setItem('inventoryItems', JSON.stringify(filtered));
-      // Force re-render by updating state (if needed)
-      setStaffMembers((prev) => [...prev]);
-    } catch {}
+    incrementSalaryCycle();
+    setStaffMembers((prev) => [...prev]);
+    setPaidSoFar(0);
   };
 
   return (
@@ -296,7 +381,7 @@ const StaffPage = () => {
                 Add Staff
               </button>
               <button
-                onClick={handleResetSalary}
+                onClick={() => setIsResetConfirmOpen(true)}
                 className="bg-red-600 text-white px-4 py-2 rounded-full flex items-center gap-1.5 hover:bg-red-700 transition-colors text-sm"
               >
                 Reset Salary
@@ -347,7 +432,7 @@ const StaffPage = () => {
                 </div>
                 <div>
                   <p className="text-xs text-gray-600">Paid So Far</p>
-                  <p className="text-xl font-semibold text-gray-900">₹{paidSoFar}</p>
+                  <p className="text-xl font-semibold text-gray-900">₹{paidSoFar.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
                 </div>
               </div>
             </div>
@@ -415,8 +500,9 @@ const StaffPage = () => {
                         </button>
                         <button
                           onClick={() => openPaymentModal(staff)}
-                          className="text-gray-600 hover:text-green-600"
-                          title="Process Payment"
+                          className={`${salaryLeft === 0 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-green-600'}`}
+                          title={salaryLeft === 0 ? "Full salary already paid" : "Process Payment"}
+                          disabled={salaryLeft === 0}
                         >
                           <IndianRupee size={16} />
                         </button>
@@ -692,6 +778,36 @@ const StaffPage = () => {
                   }}
                 >
                   Delete
+                </button>
+              </div>
+            </div>
+          </Modal>
+
+          {/* Reset Salary Confirmation Modal */}
+          <Modal
+            isOpen={isResetConfirmOpen}
+            onClose={() => setIsResetConfirmOpen(false)}
+            title="Reset Salary Cycle"
+          >
+            <div className="space-y-4">
+              <p>Are you sure you want to reset the salary cycle? This will allow you to pay salaries again, but all previous salary payment records will remain in inventory/expenses for history.</p>
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setIsResetConfirmOpen(false)}
+                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="px-4 py-2 bg-red-600 text-white rounded-full text-sm hover:bg-red-700 transition-colors"
+                  onClick={() => {
+                    handleResetSalary();
+                    setIsResetConfirmOpen(false);
+                  }}
+                >
+                  Reset Salary
                 </button>
               </div>
             </div>

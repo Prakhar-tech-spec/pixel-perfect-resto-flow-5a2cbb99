@@ -149,9 +149,11 @@ const InventoryExpenses = () => {
   
   const handleSortChange = (order) => {
     setSortOrder(order);
-    if (window.removeAllDropdowns) {
-      window.removeAllDropdowns();
-    }
+    setTimeout(() => {
+      if (window.removeAllDropdowns) {
+        window.removeAllDropdowns();
+      }
+    }, 0);
   };
   
   const handlePaymentModeChange = (mode) => {
@@ -343,10 +345,18 @@ const InventoryExpenses = () => {
 
           <button 
             id={PRICE_BUTTON_ID}
-            className="px-4 py-2 rounded-full border border-gray-200 flex items-center gap-2"
+            className={`px-4 py-2 rounded-full border border-gray-200 flex items-center gap-2 ${sortOrder ? 'bg-black text-white' : ''}`}
             onClick={showPriceDropdown}
           >
-            Sort by Price
+            {sortOrder === 'low-to-high' && (
+              <span className="font-semibold">Price: Low to High</span>
+            )}
+            {sortOrder === 'high-to-low' && (
+              <span className="font-semibold">Price: High to Low</span>
+            )}
+            {!sortOrder && (
+              <span>Sort by Price</span>
+            )}
             <ChevronDown size={16} />
           </button>
 

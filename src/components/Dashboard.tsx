@@ -1005,46 +1005,67 @@ const Dashboard: React.FC = () => {
     pdf.text(`Downloaded: ${new Date().toLocaleString()}`, pageWidth - 12, 16, { align: 'right' });
     y = 24;
 
+    // Helper for right-aligning numbers
+    const rightAlign = (val) => ({ content: val, styles: { halign: 'right' } });
+
     // 1. Inventory Section
     pdf.setTextColor('#22223b');
     pdf.setFontSize(16);
     pdf.text('Inventory', pageWidth / 2, y, { align: 'center' });
-    y += 6;
+    y += 8;
     const inventoryItems = JSON.parse(localStorage.getItem('inventoryItems') || '[]');
     let tableResult = autoTable(pdf, {
       startY: y,
       head: [[
-        'Item', 'Quantity', 'Price', 'Payment Mode', 'Notes', 'Date', 'Type'
+        { content: 'Item', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Quantity', styles: { halign: 'right', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Price', styles: { halign: 'right', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Payment Mode', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Notes', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Date', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Type', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
       ]],
-      body: inventoryItems.map(item => [
+      body: inventoryItems.length > 0 ? inventoryItems.map(item => [
         item.name,
-        item.quantity,
-        `₹${Number(item.price).toFixed(2)}`,
+        rightAlign(item.quantity),
+        rightAlign(`₹${Number(item.price).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`),
         item.paymentMode,
         item.notes || '-',
         item.date,
         item.isSale ? 'Sale' : 'Expense'
-      ]),
+      ]) : [[{ content: 'No inventory items found', colSpan: 7, styles: { halign: 'center', fontStyle: 'italic', textColor: [150,150,150] } }]],
       theme: 'striped',
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [34, 34, 59] },
+      styles: { font: 'helvetica', fontSize: 10, cellPadding: 3, overflow: 'linebreak', valign: 'middle' },
+      headStyles: { fillColor: [34, 34, 59], textColor: 255, fontStyle: 'bold', fontSize: 11 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
       margin: { left: 10, right: 10 },
+      tableLineColor: [220, 220, 220],
+      tableLineWidth: 0.3,
+      didDrawPage: (data) => {
+        y = data.cursor.y;
+      }
     }) as any;
-    y = tableResult && tableResult.finalY ? tableResult.finalY + 4 : y + 10;
+    y = tableResult && tableResult.finalY ? tableResult.finalY + 10 : y + 12;
     // Inventory totals
     const expensesTotal = inventoryItems.filter(i => !i.isSale).reduce((t, i) => t + Number(i.price), 0);
     const salesTotal = inventoryItems.filter(i => i.isSale).reduce((t, i) => t + Number(i.price), 0);
     const difference = salesTotal - expensesTotal;
-    pdf.setFontSize(11);
-    pdf.setTextColor('#222');
-    pdf.text(`Sales Total: ₹${salesTotal.toFixed(2)}   Expenses Total: ₹${expensesTotal.toFixed(2)}   Difference: ₹${difference.toFixed(2)}`, 12, y);
+    pdf.setFontSize(12);
+    pdf.setTextColor('#22223b');
+    pdf.setFont('helvetica', 'bold');
+    const marginLeft = 12;
+    pdf.text(`Sales Total: ₹${salesTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, marginLeft, y);
+    y += 8;
+    pdf.text(`Expenses Total: ₹${expensesTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, marginLeft, y);
+    y += 8;
+    pdf.text(`Difference: ₹${difference.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, marginLeft, y);
     // --- New Page for Staff ---
     pdf.addPage();
     y = 20;
     pdf.setFontSize(16);
     pdf.setTextColor('#22223b');
     pdf.text('Staff & Salary', pageWidth / 2, y, { align: 'center' });
-    y += 6;
+    y += 8;
     const staffMembers = JSON.parse(localStorage.getItem('staffMembers') || '[]');
     // Helper to get salary paid for a staff member
     const getSalaryPaid = staff => {
@@ -1055,7 +1076,13 @@ const Dashboard: React.FC = () => {
     tableResult = autoTable(pdf, {
       startY: y,
       head: [[
-        'Name', 'Role', 'Salary', 'Payment Type', 'Last Paid On', 'Salary Paid', 'Salary Left'
+        { content: 'Name', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Role', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Salary', styles: { halign: 'right', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Payment Type', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Last Paid On', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Salary Paid', styles: { halign: 'right', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Salary Left', styles: { halign: 'right', fontStyle: 'bold', fontSize: 11 } },
       ]],
       body: staffMembers.map(staff => {
         const paid = getSalaryPaid(staff);
@@ -1063,31 +1090,38 @@ const Dashboard: React.FC = () => {
         return [
           staff.name,
           staff.role,
-          `₹${Number(staff.salary).toFixed(2)}`,
+          rightAlign(`₹${Number(staff.salary).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`),
           staff.paymentType,
           staff.lastPaidOn,
-          `₹${paid.toFixed(2)}`,
-          `₹${left.toFixed(2)}`
+          rightAlign(`₹${paid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`),
+          rightAlign(`₹${left.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`)
         ];
       }),
       theme: 'striped',
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [34, 34, 59] },
+      styles: { font: 'helvetica', fontSize: 10, cellPadding: 3, overflow: 'linebreak', valign: 'middle' },
+      headStyles: { fillColor: [34, 34, 59], textColor: 255, fontStyle: 'bold', fontSize: 11 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
       margin: { left: 10, right: 10 },
+      tableLineColor: [220, 220, 220],
+      tableLineWidth: 0.3,
     }) as any;
-    y = tableResult && tableResult.finalY ? tableResult.finalY + 10 : y + 10;
+    y = tableResult && tableResult.finalY ? tableResult.finalY + 10 : y + 12;
     // --- New Page for Attendance ---
     pdf.addPage();
     y = 20;
     pdf.setFontSize(16);
     pdf.setTextColor('#22223b');
     pdf.text('Attendance', pageWidth / 2, y, { align: 'center' });
-    y += 6;
+    y += 8;
     const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
     tableResult = autoTable(pdf, {
       startY: y,
       head: [[
-        'Staff Name', 'Date', 'Status', 'Time', 'Notes'
+        { content: 'Staff Name', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Date', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Status', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Time', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Notes', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
       ]],
       body: attendanceRecords.map(record => [
         record.staffMember || record.staffName || '-',
@@ -1097,50 +1131,67 @@ const Dashboard: React.FC = () => {
         record.notes || '-'
       ]),
       theme: 'striped',
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [34, 34, 59] },
+      styles: { font: 'helvetica', fontSize: 10, cellPadding: 3, overflow: 'linebreak', valign: 'middle' },
+      headStyles: { fillColor: [34, 34, 59], textColor: 255, fontStyle: 'bold', fontSize: 11 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
       margin: { left: 10, right: 10 },
+      tableLineColor: [220, 220, 220],
+      tableLineWidth: 0.3,
     }) as any;
-    y = tableResult && tableResult.finalY ? tableResult.finalY + 10 : y + 10;
+    y = tableResult && tableResult.finalY ? tableResult.finalY + 10 : y + 12;
     // --- New Page for Sales ---
     pdf.addPage();
     y = 20;
     pdf.setFontSize(16);
     pdf.setTextColor('#22223b');
     pdf.text('Sales', pageWidth / 2, y, { align: 'center' });
-    y += 6;
+    y += 8;
     const salesItems = inventoryItems.filter(i => i.isSale);
     tableResult = autoTable(pdf, {
       startY: y,
       head: [[
-        'Item', 'Quantity', 'Price', 'Payment Mode', 'Notes', 'Date'
+        { content: 'Item', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Quantity', styles: { halign: 'right', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Price', styles: { halign: 'right', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Payment Mode', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Notes', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Date', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
       ]],
       body: salesItems.map(item => [
         item.name,
-        item.quantity,
-        `₹${Number(item.price).toFixed(2)}`,
+        rightAlign(item.quantity),
+        rightAlign(`₹${Number(item.price).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`),
         item.paymentMode,
         item.notes || '-',
         item.date
       ]),
       theme: 'striped',
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [34, 34, 59] },
+      styles: { font: 'helvetica', fontSize: 10, cellPadding: 3, overflow: 'linebreak', valign: 'middle' },
+      headStyles: { fillColor: [34, 34, 59], textColor: 255, fontStyle: 'bold', fontSize: 11 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
       margin: { left: 10, right: 10 },
+      tableLineColor: [220, 220, 220],
+      tableLineWidth: 0.3,
     }) as any;
-    y = tableResult && tableResult.finalY ? tableResult.finalY + 10 : y + 10;
+    y = tableResult && tableResult.finalY ? tableResult.finalY + 10 : y + 12;
     // --- New Page for Notes ---
     pdf.addPage();
     y = 20;
     pdf.setFontSize(16);
     pdf.setTextColor('#22223b');
     pdf.text('Notes', pageWidth / 2, y, { align: 'center' });
-    y += 6;
+    y += 8;
     const notes = JSON.parse(localStorage.getItem('notes') || '[]');
     tableResult = autoTable(pdf, {
       startY: y,
       head: [[
-        'Title', 'Content', 'Category', 'Priority', 'Created At', 'Updated At', 'Pinned'
+        { content: 'Title', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Content', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Category', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Priority', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Created At', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Updated At', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
+        { content: 'Pinned', styles: { halign: 'left', fontStyle: 'bold', fontSize: 11 } },
       ]],
       body: notes.map(note => [
         note.title,
@@ -1152,9 +1203,12 @@ const Dashboard: React.FC = () => {
         note.isPinned ? 'Yes' : 'No'
       ]),
       theme: 'striped',
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [34, 34, 59] },
+      styles: { font: 'helvetica', fontSize: 10, cellPadding: 3, overflow: 'linebreak', valign: 'middle' },
+      headStyles: { fillColor: [34, 34, 59], textColor: 255, fontStyle: 'bold', fontSize: 11 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
       margin: { left: 10, right: 10 },
+      tableLineColor: [220, 220, 220],
+      tableLineWidth: 0.3,
     }) as any;
     // Save the PDF
     pdf.save(`RajaDhaba_FullReport_${new Date().toISOString().slice(0,10)}.pdf`);

@@ -56,7 +56,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userName = 'Raja Dhaba' }) => {
             key={item.name}
             to={item.path}
             onClick={() => window.innerWidth < 1024 && setIsOpen(false)}
-            className={({ isActive }) =>
+            className={({ isActive }) => 
               `group flex items-center gap-4 px-5 py-2.5 rounded-[20px] text-[14px] md:text-[15px] font-medium transition-all relative overflow-hidden ${
                 isActive
                   ? 'text-white'

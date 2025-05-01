@@ -999,7 +999,7 @@ const Dashboard: React.FC = () => {
     pdf.setTextColor('#fff');
     pdf.setFontSize(22);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Raja Dhaba', pageWidth / 2, 12, { align: 'center' });
+    pdf.text('RD', pageWidth / 2, 12, { align: 'center' });
     pdf.setFontSize(10);
     pdf.setTextColor('#fff');
     pdf.text(`Downloaded: ${new Date().toLocaleString()}`, pageWidth - 12, 16, { align: 'right' });
@@ -1211,7 +1211,7 @@ const Dashboard: React.FC = () => {
       tableLineWidth: 0.3,
     }) as any;
     // Save the PDF
-    pdf.save(`RajaDhaba_FullReport_${new Date().toISOString().slice(0,10)}.pdf`);
+    pdf.save(`RD_FullReport_${new Date().toISOString().slice(0,10)}.pdf`);
   };
   
   if (isLoading) {

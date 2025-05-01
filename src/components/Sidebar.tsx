@@ -7,7 +7,7 @@ interface SidebarProps {
   userName?: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ userName = 'Raja Dhaba' }) => {
+const Sidebar: React.FC<SidebarProps> = ({ userName = 'RD' }) => {
   const [isOpen, setIsOpen] = useState(true);
 
   const navItems = [

@@ -58,17 +58,17 @@ const App = () => {
   };
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
           {!isAuthenticated && <PinAuth onAuthSuccess={handleAuthSuccess} />}
           {isAuthenticated && <AnimatedRoutes />}
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
-  );
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 };
 
 export default App;

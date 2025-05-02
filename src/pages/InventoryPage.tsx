@@ -357,7 +357,7 @@ const InventoryPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-700 text-sm mb-1.5">Quantity</label>
+                  <label className="block text-gray-700 text-sm mb-1.5">Quantity <span className="text-gray-400 text-xs">(Optional)</span></label>
                   <input
                     type="text"
                     name="quantity"
@@ -365,7 +365,6 @@ const InventoryPage = () => {
                     onChange={handleInputChange}
                     placeholder="e.g. 5, 2kg, 500g, 1 dozen"
                     className="w-full px-3 py-2 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/5 text-sm"
-                    required
                   />
                 </div>
               </div>
@@ -411,7 +410,7 @@ const InventoryPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-700 text-sm mb-1.5">Notes</label>
+                  <label className="block text-gray-700 text-sm mb-1.5">Notes <span className="text-gray-400 text-xs">(Optional)</span></label>
                   <input
                     type="text"
                     name="notes"

@@ -83,6 +83,9 @@ const StaffPage = () => {
   const [deleteStaffId, setDeleteStaffId] = useState<string | null>(null);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [paidSoFar, setPaidSoFar] = useState(0);
+  const [paymentDate, setPaymentDate] = useState<string>(() => {
+    return localStorage.getItem('lastPaymentDate') || new Date().toISOString().slice(0, 10);
+  });
   
   // Load staff data from localStorage
   useEffect(() => {
@@ -253,6 +256,7 @@ const StaffPage = () => {
     setPaymentStaff(staff);
     setPaymentAmount('');
     setPaymentMode('Cash');
+    setPaymentDate(localStorage.getItem('lastPaymentDate') || new Date().toISOString().slice(0, 10));
     setIsPaymentModalOpen(true);
   };
 
@@ -295,7 +299,7 @@ const StaffPage = () => {
 
     // Add payment as an expense in inventoryItems, with salaryCycle
     const today = new Date();
-    const formattedDate = today.toLocaleDateString('en-IN');
+    const formattedDate = paymentDate;
     const currentCycle = getCurrentSalaryCycle();
     const newExpense = {
       id: Date.now().toString(),
@@ -328,6 +332,9 @@ const StaffPage = () => {
 
     // Update paidSoFar
     updatePaidSoFar();
+
+    // Save last used date
+    localStorage.setItem('lastPaymentDate', formattedDate);
 
     toast({
       title: "Payment Successful",
@@ -726,6 +733,16 @@ const StaffPage = () => {
                       <option key={method} value={method}>{method}</option>
                     ))}
                   </select>
+                </div>
+                <div>
+                  <label className="block text-gray-700 text-sm mb-1.5">Payment Date</label>
+                  <input
+                    type="date"
+                    value={paymentDate}
+                    onChange={e => setPaymentDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/5 text-sm"
+                    required
+                  />
                 </div>
                 <div className="flex justify-end gap-3 mt-6">
                   <button

@@ -696,9 +696,9 @@ const InventoryPage = () => {
                   <div 
                     key={item.id} 
                     className={`grid grid-cols-7 md:grid-cols-7 gap-2 px-6 py-3 border-b border-gray-100 items-center
-                      ${item.isSale ? 'bg-black' : 'hover:bg-gray-50/50'}
+                      ${item.isSale ? '' : 'hover:bg-gray-50/50'}
                     `}
-                    style={item.isSale ? { color: '#fff' } : {}}
+                    style={item.isSale ? { background: '#555555', color: '#fff' } : {}}
                   >
                     <div className="col-span-2 md:col-span-1 text-sm" title={item.name} style={item.isSale ? { color: '#fff' } : { color: '#1a1a1a' }}>
                       {item.isSale ? 'Sales' : item.name}
@@ -743,19 +743,19 @@ const InventoryPage = () => {
             </div>
 
             {/* Sticky Totals Footer */}
-            <div className="px-6 py-3 bg-white border-t border-gray-200 sticky bottom-0 left-0 right-0 z-20">
+            <div className="px-6 py-3 border-t border-gray-200 sticky bottom-0 left-0 right-0 z-20" style={{background: '#111111', color: '#FFFFFF'}}>
               <div className="flex flex-col md:flex-row justify-end items-start md:items-center gap-3 md:gap-6">
                 <div className="flex items-center gap-3">
-                  <span className="text-sm text-gray-500">Sales Total:</span>
-                  <span className="text-sm font-medium text-gray-900">₹{salesTotal.toFixed(2)}</span>
+                  <span className="text-sm" style={{color: '#FFFFFF'}}>Sales Total:</span>
+                  <span className="text-sm font-medium" style={{color: '#FFFFFF'}}>₹{salesTotal.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm text-gray-500">Expenses Total:</span>
-                  <span className="text-sm font-medium text-gray-900">₹{expensesTotal.toFixed(2)}</span>
+                  <span className="text-sm" style={{color: '#FFFFFF'}}>Expenses Total:</span>
+                  <span className="text-sm font-medium" style={{color: '#FFFFFF'}}>₹{expensesTotal.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm text-gray-500">Difference:</span>
-                  <span className={`text-sm font-medium ${difference < 0 ? 'text-red-500' : 'text-green-500'}`}>
+                  <span className="text-sm" style={{color: '#FFFFFF'}}>Difference:</span>
+                  <span className="text-sm font-medium" style={{color: difference < 0 ? '#EF4444' : '#22C55E'}}>
                     {difference < 0 ? '-' : ''}₹{Math.abs(difference).toFixed(2)}
                   </span>
                 </div>

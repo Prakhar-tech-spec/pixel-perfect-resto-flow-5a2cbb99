@@ -118,11 +118,11 @@ const InventoryPage = () => {
 
     // Search filter
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+      const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter(item =>
-        item.name.toLowerCase().includes(query) ||
-        item.notes?.toLowerCase().includes(query) ||
-        item.paymentMode.toLowerCase().includes(query)
+        (item.name?.toLowerCase().includes(query) || false) ||
+        (item.notes?.toLowerCase().includes(query) || false) ||
+        (item.paymentMode?.toLowerCase().includes(query) || false)
       );
     }
 

@@ -10,6 +10,20 @@ import { InventoryItem as StorageInventoryItem } from '@/utils/storage';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import autoTable from 'jspdf-autotable';
+import { groupAndOrderInventoryItems } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 // Helper function to format time
 const formatTime = (date: Date) => {
@@ -254,6 +268,9 @@ const Dashboard: React.FC = () => {
   const [filteredExpenses, setFilteredExpenses] = useState(0);
   const [totalSales, setTotalSales] = useState(0);
   const [filteredSales, setFilteredSales] = useState(0);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState('');
+  const [exportEndDate, setExportEndDate] = useState('');
 
   // Update the loadSalesDataDirectly function
   const loadSalesDataDirectly = useCallback(async () => {
@@ -988,12 +1005,40 @@ const Dashboard: React.FC = () => {
     };
   }, [loadAttendanceData, loadNotesData]);
   
-  // PDF Export Handler for all pages with detailed tables
-  const handleExportPDF = async () => {
+  // Helper to normalize a date string to yyyy-mm-dd
+  function normalizeToYMD(dateStr) {
+    if (!dateStr) return '';
+    if (dateStr.includes('/')) {
+      const [day, month, year] = dateStr.split('/').map(Number);
+      return `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+    }
+    // Already yyyy-mm-dd or similar
+    return dateStr.slice(0, 10);
+  }
+
+  // Helper to filter items by date range (inclusive)
+  function filterItemsByDateRange(items, start, end) {
+    if (!start && !end) return items;
+    const startYMD = start ? normalizeToYMD(start) : null;
+    const endYMD = end ? normalizeToYMD(end) : null;
+    return items.filter(item => {
+      const itemYMD = normalizeToYMD(item.date);
+      if (startYMD && itemYMD < startYMD) return false;
+      if (endYMD && itemYMD > endYMD) return false;
+      // If start and end are the same, only include that date
+      if (startYMD && endYMD && startYMD === endYMD) {
+        return itemYMD === startYMD;
+      }
+      return true;
+    });
+  }
+
+  // Modified export handler to accept date range
+  const handleExportPDFWithRange = async (rangeMode: 'range' | 'full') => {
+    setExportDialogOpen(false);
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
     let y = 20;
-    // Add custom header
     pdf.setFillColor('#22223b');
     pdf.rect(0, 0, pageWidth, 18, 'F');
     pdf.setTextColor('#fff');
@@ -1004,16 +1049,23 @@ const Dashboard: React.FC = () => {
     pdf.setTextColor('#fff');
     pdf.text(`Downloaded: ${new Date().toLocaleString()}`, pageWidth - 12, 16, { align: 'right' });
     y = 24;
-
-    // Helper for right-aligning numbers
     const rightAlign = (val) => ({ content: val, styles: { halign: 'right' } });
-
-    // 1. Inventory Section
+    // Inventory Section
     pdf.setTextColor('#22223b');
     pdf.setFontSize(16);
     pdf.text('Inventory', pageWidth / 2, y, { align: 'center' });
     y += 8;
-    const inventoryItems = JSON.parse(localStorage.getItem('inventoryItems') || '[]');
+    const rawInventoryItems = JSON.parse(localStorage.getItem('inventoryItems') || '[]');
+    let inventoryItems = groupAndOrderInventoryItems(rawInventoryItems);
+    let filename = `RD_Report_Full_${new Date().toISOString().slice(0,10)}.pdf`;
+    if (rangeMode === 'range' && (exportStartDate || exportEndDate)) {
+      inventoryItems = groupAndOrderInventoryItems(filterItemsByDateRange(rawInventoryItems, exportStartDate, exportEndDate));
+      if (exportStartDate && exportEndDate && exportStartDate === exportEndDate) {
+        filename = `RD_Report_${exportStartDate}.pdf`;
+      } else {
+        filename = `RD_Report_${exportStartDate || 'start'}_to_${exportEndDate || 'end'}_${new Date().toISOString().slice(0,10)}.pdf`;
+      }
+    }
     let tableResult = autoTable(pdf, {
       startY: y,
       head: [[
@@ -1211,7 +1263,7 @@ const Dashboard: React.FC = () => {
       tableLineWidth: 0.3,
     }) as any;
     // Save the PDF
-    pdf.save(`RD_FullReport_${new Date().toISOString().slice(0,10)}.pdf`);
+    pdf.save(filename);
   };
   
   if (isLoading) {
@@ -1405,10 +1457,37 @@ const Dashboard: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.5 }}
           >
-            <Button className="w-full flex items-center justify-center gap-2 py-6 bg-black hover:bg-neutral-800 text-white" onClick={handleExportPDF}>
-              <Download className="h-5 w-5" />
-              Export Data
-            </Button>
+            <AlertDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button className="w-full flex items-center justify-center gap-2 py-6 bg-black hover:bg-neutral-800 text-white">
+                  <Download className="h-5 w-5" />
+                  Export Data
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Export Data to PDF</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Select a date range to export data for a specific period, or export all data.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="flex flex-col gap-4 py-2">
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="export-start-date">Start Date</Label>
+                    <Input id="export-start-date" type="date" value={exportStartDate} onChange={e => setExportStartDate(e.target.value)} />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="export-end-date">End Date</Label>
+                    <Input id="export-end-date" type="date" value={exportEndDate} onChange={e => setExportEndDate(e.target.value)} />
+                  </div>
+                </div>
+                <AlertDialogFooter>
+                  <Button variant="destructive" onClick={() => handleExportPDFWithRange('full')}>Full Data</Button>
+                  <Button onClick={() => handleExportPDFWithRange('range')} disabled={!exportStartDate && !exportEndDate}>Export</Button>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </motion.div>
         </div>
       </div>

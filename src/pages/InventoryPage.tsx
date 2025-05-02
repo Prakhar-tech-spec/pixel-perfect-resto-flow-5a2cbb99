@@ -218,6 +218,9 @@ const InventoryPage = () => {
       ...prev,
       [name]: value
     }));
+    if (name === 'paymentMode') {
+      localStorage.setItem('lastPaymentMode', value);
+    }
   };
 
   const handleEdit = (item: InventoryItem) => {
@@ -255,6 +258,7 @@ const InventoryPage = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    localStorage.setItem('lastPaymentMode', newItem.paymentMode);
     
     let updatedItems: InventoryItem[] = [];
     
@@ -366,7 +370,7 @@ const InventoryPage = () => {
                   name: '',
                   quantity: '',
                   price: '',
-                  paymentMode: 'Cash',
+                  paymentMode: localStorage.getItem('lastPaymentMode') || '',
                   notes: '',
                   date: lastUsedDate
                 });

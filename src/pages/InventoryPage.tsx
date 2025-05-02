@@ -157,6 +157,48 @@ const InventoryPage = () => {
     return filtered;
   }, [inventoryItems, searchQuery, startDate, endDate, selectedPaymentMode, priceSort, removeSales]);
 
+  // Group and order filteredItems: expenses above sales for each date
+  const groupedAndOrderedItems = React.useMemo(() => {
+    // Group by date
+    const groups: Record<string, InventoryItem[]> = {};
+    filteredItems.forEach(item => {
+      // Normalize date to dd/mm/yyyy for grouping
+      let dateKey = item.date;
+      // Try to handle both dd/mm/yyyy and yyyy-mm-dd
+      if (/\d{4}-\d{2}-\d{2}/.test(dateKey)) {
+        // Convert yyyy-mm-dd to dd/mm/yyyy
+        const [y, m, d] = dateKey.split('-');
+        dateKey = `${d}/${m}/${y}`;
+      }
+      groups[dateKey] = groups[dateKey] || [];
+      groups[dateKey].push(item);
+    });
+    // Sort dates descending (latest first)
+    const sortedDates = Object.keys(groups).sort((a, b) => {
+      // Convert to Date objects for comparison
+      const parse = (str: string) => {
+        if (/\d{2}\/\d{2}\/\d{4}/.test(str)) {
+          const [d, m, y] = str.split('/');
+          return new Date(`${y}-${m}-${d}`);
+        } else if (/\d{4}-\d{2}-\d{2}/.test(str)) {
+          return new Date(str);
+        }
+        return new Date(str);
+      };
+      return parse(b).getTime() - parse(a).getTime();
+    });
+    // For each date, put expenses first, then sales
+    const ordered: InventoryItem[] = [];
+    sortedDates.forEach(date => {
+      const items = groups[date];
+      // Expenses (not sales)
+      ordered.push(...items.filter(i => !i.isSale));
+      // Sales
+      ordered.push(...items.filter(i => i.isSale));
+    });
+    return ordered;
+  }, [filteredItems]);
+
   // Calculate totals from filtered items
   const expensesTotal = filteredItems.filter(item => !item.isSale).reduce((total, item) => total + item.price, 0);
   const salesTotal = filteredItems.filter(item => item.isSale).reduce((total, item) => total + item.price, 0);
@@ -650,7 +692,7 @@ const InventoryPage = () => {
 
             <div className="overflow-y-auto max-h-[calc(100vh-400px)] w-full">
               <div className="min-w-full">
-                {filteredItems.map((item) => (
+                {groupedAndOrderedItems.map((item) => (
                   <div 
                     key={item.id} 
                     className={`grid grid-cols-7 md:grid-cols-7 gap-2 px-6 py-3 hover:bg-gray-50/50 border-b border-gray-100 items-center ${

@@ -74,15 +74,15 @@ const InventoryPage = () => {
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
 
   const paymentMethods: PaymentMethod[] = [
-    { name: 'Paytm', color: 'bg-[#f8f9fa]' },
-    { name: 'B.H Account', color: 'bg-pink-50' },
-    { name: 'C.H Account', color: 'bg-pink-50' },
-    { name: 'RS Account', color: 'bg-red-50' },
-    { name: 'RH Account', color: 'bg-green-50' },
-    { name: 'MS Account', color: 'bg-orange-50' },
-    { name: 'SS Account', color: 'bg-orange-50' },
-    { name: 'Cash', color: 'bg-blue-50' },
-    { name: 'Cash Exchange', color: 'bg-purple-50' }
+    { name: 'Paytm', color: 'bg-[#e0e3e7]' },
+    { name: 'B.H Account', color: 'bg-[#ffe0ef]' },
+    { name: 'C.H Account', color: 'bg-[#ffe0ef]' },
+    { name: 'RS Account', color: 'bg-[#ffd6e0]' },
+    { name: 'RH Account', color: 'bg-[#d6f5e3]' },
+    { name: 'MS Account', color: 'bg-[#ffe9cc]' },
+    { name: 'SS Account', color: 'bg-[#ffe9cc]' },
+    { name: 'Cash', color: 'bg-[#d6eaff]' },
+    { name: 'Cash Exchange', color: 'bg-[#f0e6ff]' }
   ];
 
   // Load inventory items from localStorage
@@ -695,36 +695,44 @@ const InventoryPage = () => {
                 {groupedAndOrderedItems.map((item) => (
                   <div 
                     key={item.id} 
-                    className={`grid grid-cols-7 md:grid-cols-7 gap-2 px-6 py-3 hover:bg-gray-50/50 border-b border-gray-100 items-center ${
-                      item.isSale ? 'bg-gray-100' : ''
-                    }`}
+                    className={`grid grid-cols-7 md:grid-cols-7 gap-2 px-6 py-3 border-b border-gray-100 items-center
+                      ${item.isSale ? 'bg-black' : 'hover:bg-gray-50/50'}
+                    `}
+                    style={item.isSale ? { color: '#fff' } : {}}
                   >
-                    <div className="col-span-2 md:col-span-1 text-sm text-gray-900" title={item.name}>
+                    <div className="col-span-2 md:col-span-1 text-sm" title={item.name} style={item.isSale ? { color: '#fff' } : { color: '#1a1a1a' }}>
                       {item.isSale ? 'Sales' : item.name}
                     </div>
-                    <div className="hidden md:block text-sm text-gray-600 truncate" title={item.quantity}>
+                    <div className="hidden md:block text-sm truncate" title={item.quantity} style={item.isSale ? { color: '#fff' } : { color: '#4b5563' }}>
                       {item.quantity}
                     </div>
-                    <div className="text-sm text-gray-900">₹{item.price.toFixed(2)}</div>
+                    <div className="text-sm" style={item.isSale ? { color: '#fff' } : { color: '#1a1a1a' }}>
+                      ₹{item.price.toFixed(2)}
+                    </div>
                     <div className="hidden md:block">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${paymentMethods.find(m => m.name === item.paymentMode)?.color || 'bg-gray-50'}`}>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${paymentMethods.find(m => m.name === item.paymentMode)?.color || 'bg-gray-50'}`}
+                        style={item.isSale ? { color: '#000' } : {}}>
                         {item.paymentMode}
                       </span>
                     </div>
-                    <div className="hidden md:block text-sm text-gray-500 truncate" title={item.notes}>
+                    <div className="hidden md:block text-sm truncate" title={item.notes} style={item.isSale ? { color: '#fff' } : { color: '#6b7280' }}>
                       {item.notes || '-'}
                     </div>
-                    <div className="text-sm text-gray-600">{item.date}</div>
+                    <div className="text-sm" style={item.isSale ? { color: '#fff' } : { color: '#6b7280' }}>
+                      {item.date}
+                    </div>
                     <div className="flex items-center gap-1">
                       <button 
                         onClick={() => handleEdit(item)}
-                        className="p-1.5 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                        className="p-1.5 hover:bg-gray-100 rounded-full"
+                        style={item.isSale ? { color: '#fff' } : {}}
                       >
                         <Edit2 size={14} />
                       </button>
                       <button 
                         onClick={() => handleDelete(item.id)}
-                        className="p-1.5 hover:bg-red-50 rounded-full text-gray-400 hover:text-red-500 transition-colors duration-200"
+                        className="p-1.5 hover:bg-red-50 rounded-full"
+                        style={item.isSale ? { color: '#fff' } : {}}
                       >
                         <Trash2 size={14} />
                       </button>

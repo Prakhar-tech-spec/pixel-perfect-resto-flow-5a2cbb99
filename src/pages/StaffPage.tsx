@@ -47,15 +47,15 @@ const paymentMethods = [
 ];
 
 const paymentTypeColors: Record<string, string> = {
-  'Paytm': 'bg-[#f8f9fa] text-gray-800',
-  'B.H Account': 'bg-pink-50 text-pink-700',
-  'C.H Account': 'bg-pink-50 text-pink-700',
-  'RS Account': 'bg-red-50 text-red-700',
-  'RH Account': 'bg-green-50 text-green-700',
-  'MS Account': 'bg-orange-50 text-orange-700',
-  'SS Account': 'bg-orange-50 text-orange-700',
-  'Cash': 'bg-blue-50 text-blue-700',
-  'Cash Exchange': 'bg-purple-50 text-purple-700',
+  'Paytm': 'bg-[#e0e3e7] text-gray-800',
+  'B.H Account': 'bg-[#ffe0ef] text-gray-800',
+  'C.H Account': 'bg-[#ffe0ef] text-gray-800',
+  'RS Account': 'bg-[#ffd6e0] text-gray-800',
+  'RH Account': 'bg-[#d6f5e3] text-gray-800',
+  'MS Account': 'bg-[#ffe9cc] text-gray-800',
+  'SS Account': 'bg-[#ffe9cc] text-gray-800',
+  'Cash': 'bg-[#d6eaff] text-gray-800',
+  'Cash Exchange': 'bg-[#f0e6ff] text-gray-800',
 };
 
 const StaffPage = () => {

@@ -6,6 +6,7 @@ import { storage } from '@/utils/storage';
 import type { InventoryItem as StorageInventoryItem } from '@/utils/storage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
+import { format } from 'date-fns';
 
 interface PaymentMethod {
   name: string;
@@ -72,6 +73,10 @@ const InventoryPage = () => {
   const [paymentDropdownPos, setPaymentDropdownPos] = useState<{top: number, left: number} | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState('All');
+  const [showMonthDropdown, setShowMonthDropdown] = useState(false);
+  const monthButtonRef = useRef<HTMLButtonElement>(null);
+  const [monthDropdownPos, setMonthDropdownPos] = useState<{top: number, left: number} | null>(null);
 
   const paymentMethods: PaymentMethod[] = [
     { name: 'Paytm', color: 'bg-[#e0e3e7]' },
@@ -210,6 +215,7 @@ const InventoryPage = () => {
     setEndDate('');
     setSelectedPaymentMode('');
     setPriceSort('none');
+    setSelectedMonth('All');
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -350,6 +356,38 @@ const InventoryPage = () => {
       });
     }
   }, [showPaymentModeDropdown]);
+
+  useEffect(() => {
+    if (showMonthDropdown && monthButtonRef.current) {
+      const rect = monthButtonRef.current.getBoundingClientRect();
+      setMonthDropdownPos({
+        top: rect.bottom + window.scrollY + 8, // 8px margin
+        left: rect.left + window.scrollX
+      });
+    }
+  }, [showMonthDropdown]);
+
+  // Month filter logic
+  const handleMonthChange = (month: string) => {
+    setSelectedMonth(month);
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    if (month === 'Current Month') {
+      const firstDay = new Date(currentYear, currentMonth, 1);
+      const lastDay = new Date(currentYear, currentMonth + 1, 0);
+      setStartDate(format(firstDay, 'yyyy-MM-dd'));
+      setEndDate(format(lastDay, 'yyyy-MM-dd'));
+    } else if (month === 'Previous Month') {
+      const firstDay = new Date(currentYear, currentMonth - 1, 1);
+      const lastDay = new Date(currentYear, currentMonth, 0);
+      setStartDate(format(firstDay, 'yyyy-MM-dd'));
+      setEndDate(format(lastDay, 'yyyy-MM-dd'));
+    } else {
+      setStartDate('');
+      setEndDate('');
+    }
+  };
 
   return (
     <PageLayout>
@@ -522,6 +560,53 @@ const InventoryPage = () => {
 
             {/* Filters Row */}
             <div className="flex flex-nowrap items-center gap-2 overflow-x-auto hide-scrollbar -mx-8 px-8">
+              {/* Month Filter Dropdown */}
+              <div className="relative flex-shrink-0">
+                <button
+                  ref={monthButtonRef}
+                  className="min-w-[160px] px-4 py-2 rounded-full border border-gray-200 flex items-center justify-between text-gray-700 hover:bg-gray-50 text-sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMonthDropdown((prev) => !prev);
+                    setShowPaymentModeDropdown(false);
+                    setShowSortDropdown(false);
+                  }}
+                >
+                  <span className="truncate">{selectedMonth}</span>
+                  <ChevronDown size={14} className="flex-shrink-0 ml-2" />
+                </button>
+                {showMonthDropdown && monthDropdownPos && createPortal(
+                  <AnimatePresence>
+                    <motion.div
+                      key="month-dropdown"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.18, ease: 'easeInOut' }}
+                      className="w-[180px] bg-white rounded-2xl shadow-lg border border-gray-100 py-2 z-[9999]"
+                      style={{
+                        position: 'absolute',
+                        top: monthDropdownPos.top,
+                        left: monthDropdownPos.left,
+                      }}
+                    >
+                      {['All', 'Current Month', 'Previous Month'].map(option => (
+                        <button
+                          key={option}
+                          className={`w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 ${selectedMonth === option ? 'bg-gray-100 font-semibold' : ''}`}
+                          onClick={() => {
+                            handleMonthChange(option);
+                            setShowMonthDropdown(false);
+                          }}
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </motion.div>
+                  </AnimatePresence>,
+                  document.body
+                )}
+              </div>
               {/* Date Range */}
               <div className="flex items-center gap-2 flex-shrink-0">
                 <div className="relative">
@@ -612,9 +697,12 @@ const InventoryPage = () => {
                   onClick={() => {
                     setShowSortDropdown(!showSortDropdown);
                     setShowPaymentModeDropdown(false);
+                    setShowMonthDropdown(false);
                   }}
                 >
-                  Sort by Price
+                  {priceSort === 'asc' && <span>Low to High</span>}
+                  {priceSort === 'desc' && <span>High to Low</span>}
+                  {priceSort === 'none' && <span>Sort by Price</span>}
                   <ChevronDown size={14} className="ml-2" />
                 </button>
                 {showSortDropdown && sortDropdownPos && createPortal(

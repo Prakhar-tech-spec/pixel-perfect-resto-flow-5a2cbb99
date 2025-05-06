@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Calendar, ChevronDown, Edit2, Trash2, Plus } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface PaymentMethod {
   id: string;
@@ -132,10 +133,12 @@ const InventoryExpenses = () => {
   const [removeSales, setRemoveSales] = useState(false);
   const [sortOrder, setSortOrder] = useState('');
   const [selectedPaymentMode, setSelectedPaymentMode] = useState('All Payment Modes');
+  const [selectedMonth, setSelectedMonth] = useState('All');
   
   // Special IDs for our dropdown buttons
   const PRICE_BUTTON_ID = 'sort-by-price-button';
   const PAYMENT_BUTTON_ID = 'payment-mode-button';
+  const MONTH_BUTTON_ID = 'month-filter-button';
   
   // Set up event listeners
   useEffect(() => {
@@ -199,6 +202,60 @@ const InventoryExpenses = () => {
     window.createFixedDropdown(PAYMENT_BUTTON_ID, options);
   };
 
+  const showMonthDropdown = () => {
+    if (!window.createFixedDropdown) return;
+    
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    
+    const options = [
+      {
+        text: 'All',
+        selected: selectedMonth === 'All',
+        onClick: () => handleMonthChange('All')
+      },
+      {
+        text: 'Current Month',
+        selected: selectedMonth === 'Current Month',
+        onClick: () => handleMonthChange('Current Month')
+      },
+      {
+        text: 'Previous Month',
+        selected: selectedMonth === 'Previous Month',
+        onClick: () => handleMonthChange('Previous Month')
+      }
+    ];
+    
+    window.createFixedDropdown(MONTH_BUTTON_ID, options);
+  };
+
+  const handleMonthChange = (month: string) => {
+    setSelectedMonth(month);
+    if (window.removeAllDropdowns) {
+      window.removeAllDropdowns();
+    }
+
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+
+    if (month === 'Current Month') {
+      const firstDay = new Date(currentYear, currentMonth, 1);
+      const lastDay = new Date(currentYear, currentMonth + 1, 0);
+      setStartDate(format(firstDay, 'yyyy-MM-dd'));
+      setEndDate(format(lastDay, 'yyyy-MM-dd'));
+    } else if (month === 'Previous Month') {
+      const firstDay = new Date(currentYear, currentMonth - 1, 1);
+      const lastDay = new Date(currentYear, currentMonth, 0);
+      setStartDate(format(firstDay, 'yyyy-MM-dd'));
+      setEndDate(format(lastDay, 'yyyy-MM-dd'));
+    } else {
+      setStartDate('');
+      setEndDate('');
+    }
+  };
+
   const paymentMethods: PaymentMethod[] = [
     { id: 'paytm', name: 'Paytm', icon: '💳', color: 'bg-gray-100' },
     { id: 'bh', name: 'B.H Account', icon: '💳', color: 'bg-pink-50' },
@@ -260,16 +317,21 @@ const InventoryExpenses = () => {
 
   // Sort items if needed
   const sortedInventoryItems = React.useMemo(() => {
-    if (!sortOrder) return inventoryItems;
-    
-    return [...inventoryItems].sort((a, b) => {
-      if (sortOrder === 'low-to-high') {
-        return a.price - b.price;
-      } else if (sortOrder === 'high-to-low') {
-        return b.price - a.price;
-      }
-      return 0;
-    });
+    // Helper to parse dd/mm/yyyy to Date
+    const parseDate = (dateStr: string) => {
+      const [day, month, year] = dateStr.split('/').map(Number);
+      return new Date(year, month - 1, day);
+    };
+    let items = [...inventoryItems];
+    // Sort by price if needed
+    if (sortOrder === 'low-to-high') {
+      items.sort((a, b) => a.price - b.price);
+    } else if (sortOrder === 'high-to-low') {
+      items.sort((a, b) => b.price - a.price);
+    }
+    // Always sort by date ascending (1 to 30)
+    items.sort((a, b) => parseDate(a.date).getTime() - parseDate(b.date).getTime());
+    return items;
   }, [inventoryItems, sortOrder]);
 
   return (
@@ -312,6 +374,15 @@ const InventoryExpenses = () => {
         </div>
 
         <div className="flex flex-wrap gap-3 items-center">
+          <button 
+            id={MONTH_BUTTON_ID}
+            className="px-4 py-2 rounded-full border border-gray-200 flex items-center gap-2"
+            onClick={showMonthDropdown}
+          >
+            {selectedMonth}
+            <ChevronDown size={16} />
+          </button>
+
           <div className="flex items-center gap-2">
             <div className="relative">
               <input

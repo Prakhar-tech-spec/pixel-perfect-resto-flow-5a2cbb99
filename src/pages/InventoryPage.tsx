@@ -178,7 +178,7 @@ const InventoryPage = () => {
       groups[dateKey] = groups[dateKey] || [];
       groups[dateKey].push(item);
     });
-    // Sort dates descending (latest first)
+    // Sort dates: ascending (1 to 30) for month filters, descending otherwise
     const sortedDates = Object.keys(groups).sort((a, b) => {
       // Convert to Date objects for comparison
       const parse = (str: string) => {
@@ -190,7 +190,11 @@ const InventoryPage = () => {
         }
         return new Date(str);
       };
-      return parse(b).getTime() - parse(a).getTime();
+      if (selectedMonth === 'Current Month' || selectedMonth === 'Previous Month') {
+        return parse(a).getTime() - parse(b).getTime(); // Ascending
+      } else {
+        return parse(b).getTime() - parse(a).getTime(); // Descending
+      }
     });
     // For each date, put expenses first, then sales
     const ordered: InventoryItem[] = [];
@@ -202,7 +206,7 @@ const InventoryPage = () => {
       ordered.push(...items.filter(i => i.isSale));
     });
     return ordered;
-  }, [filteredItems]);
+  }, [filteredItems, selectedMonth]);
 
   // Calculate totals from filtered items
   const expensesTotal = filteredItems.filter(item => !item.isSale).reduce((total, item) => total + item.price, 0);

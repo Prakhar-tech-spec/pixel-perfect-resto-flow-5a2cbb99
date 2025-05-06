@@ -3,6 +3,7 @@ import PageLayout from '@/components/PageLayout';
 import { Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
+import Modal from '@/components/Modal';
 
 interface AccountSale {
   account: string;
@@ -37,6 +38,10 @@ const SalesPage = () => {
   const [accountSales, setAccountSales] = useState<AccountSale[]>(
     accounts.map(account => ({ account, amount: '' }))
   );
+  const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
+  const [cashExchangeNotes, setCashExchangeNotes] = useState('');
+  const [pendingSales, setPendingSales] = useState<AccountSale[] | null>(null);
+  const [notification, setNotification] = useState(false);
 
   // Load saved sales data when date changes
   useEffect(() => {
@@ -63,17 +68,31 @@ const SalesPage = () => {
     localStorage.setItem(`sales_${selectedDate}`, JSON.stringify(newSales));
   };
 
-  // Handle update sales button click
+  // Modified handleUpdateSales
   const handleUpdateSales = () => {
+    // Check if Cash Exchange is filled
+    const cashExchangeSale = accountSales.find(sale => sale.account === 'Cash Exchange' && parseFloat(sale.amount) > 0);
+    if (cashExchangeSale) {
+      // Open notes modal and store pending sales
+      setPendingSales(accountSales);
+      setIsNotesModalOpen(true);
+      return;
+    }
+    // Otherwise, proceed as usual
+    saveSales(accountSales, '');
+  };
+
+  // Save sales to inventory, with optional notes for Cash Exchange
+  const saveSales = (sales: AccountSale[], notes: string) => {
     // Save current state to localStorage
-    localStorage.setItem(`sales_${selectedDate}`, JSON.stringify(accountSales));
+    localStorage.setItem(`sales_${selectedDate}`, JSON.stringify(sales));
 
     // Get existing inventory items
     const savedInventory = localStorage.getItem('inventoryItems') || '[]';
     let inventoryItems: InventoryItem[] = JSON.parse(savedInventory);
 
     // Add sales entries to inventory
-    const salesEntries: InventoryItem[] = accountSales
+    const salesEntries: InventoryItem[] = sales
       .filter(sale => parseFloat(sale.amount) > 0)
       .map(sale => ({
         id: `sale_${Date.now()}_${Math.random()}`,
@@ -81,7 +100,7 @@ const SalesPage = () => {
         quantity: 1,
         price: parseFloat(sale.amount),
         paymentMode: sale.account,
-        notes: `Sales entry for ${format(new Date(selectedDate), 'dd/MM/yyyy')}`,
+        notes: sale.account === 'Cash Exchange' ? (notes || `Sales entry for ${format(new Date(selectedDate), 'dd/MM/yyyy')}`) : `Sales entry for ${format(new Date(selectedDate), 'dd/MM/yyyy')}`,
         date: format(new Date(selectedDate), 'dd/MM/yyyy'),
         isSale: true
       }));
@@ -94,8 +113,20 @@ const SalesPage = () => {
     setAccountSales(accounts.map(account => ({ account, amount: '' })));
     localStorage.removeItem(`sales_${selectedDate}`);
 
-    // Show success message
-    alert('Sales updated successfully!');
+    // Show custom notification
+    setNotification(true);
+    setTimeout(() => setNotification(false), 1000);
+  };
+
+  // Handle notes modal submit
+  const handleNotesSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pendingSales) {
+      saveSales(pendingSales, cashExchangeNotes);
+    }
+    setIsNotesModalOpen(false);
+    setCashExchangeNotes('');
+    setPendingSales(null);
   };
 
   // Get background color for account icon
@@ -129,6 +160,26 @@ const SalesPage = () => {
         transition={{ duration: 0.35, ease: 'easeInOut' }}
         className="h-full"
       >
+        {/* Notification */}
+        <div
+          style={{ pointerEvents: 'none' }}
+          className={`fixed bottom-6 left-6 z-[9999]`}
+        >
+          <div
+            className={`bg-black text-white px-6 py-3 rounded-2xl shadow-lg flex items-center gap-2 text-base font-medium
+              transition-all duration-400
+              ${notification ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}
+            `}
+            style={{
+              transform: notification ? 'translateY(0)' : 'translateY(32px)',
+              opacity: notification ? 1 : 0,
+              transition: 'transform 0.35s cubic-bezier(.4,0,.2,1), opacity 0.35s cubic-bezier(.4,0,.2,1)'
+            }}
+          >
+            <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#22C55E"/><path d="M8 12.5l2.5 2.5 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Sales updated successfully!
+          </div>
+        </div>
         <div className="p-8 max-w-[1600px] mx-auto">
           {/* Header with Update Sales Button */}
           <div className="flex justify-between items-center mb-8">
@@ -141,6 +192,49 @@ const SalesPage = () => {
               Update Sales
             </button>
           </div>
+
+          {/* Notes Modal for Cash Exchange */}
+          <Modal
+            isOpen={isNotesModalOpen}
+            onClose={() => { setIsNotesModalOpen(false); setCashExchangeNotes(''); setPendingSales(null); }}
+            title="Add Notes for Cash Exchange (Optional)"
+          >
+            <form onSubmit={handleNotesSubmit} className="space-y-4">
+              <div>
+                <label className="block text-gray-700 text-sm mb-1.5">Notes <span className="text-gray-400 text-xs">(Optional)</span></label>
+                <textarea
+                  name="cashExchangeNotes"
+                  value={cashExchangeNotes}
+                  onChange={e => setCashExchangeNotes(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/5 text-sm"
+                  placeholder="Enter any notes for this Cash Exchange sale (optional)"
+                  rows={3}
+                />
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (pendingSales) {
+                      saveSales(pendingSales, '');
+                    }
+                    setIsNotesModalOpen(false);
+                    setCashExchangeNotes('');
+                    setPendingSales(null);
+                  }}
+                  className="px-4 py-2 rounded-full border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm"
+                >
+                  Skip
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-full bg-black text-white hover:bg-black/90 text-sm"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          </Modal>
 
           {/* Total Sales Section */}
           <div className="bg-white rounded-[20px] p-6 mb-6">

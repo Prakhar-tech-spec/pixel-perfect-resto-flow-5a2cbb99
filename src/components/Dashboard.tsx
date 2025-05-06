@@ -1459,10 +1459,10 @@ const Dashboard: React.FC = () => {
           >
             <AlertDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
               <AlertDialogTrigger asChild>
-                <Button className="w-full flex items-center justify-center gap-2 py-6 bg-black hover:bg-neutral-800 text-white">
-                  <Download className="h-5 w-5" />
-                  Export Data
-                </Button>
+            <Button className="w-full flex items-center justify-center gap-2 py-6 bg-black hover:bg-neutral-800 text-white">
+              <Download className="h-5 w-5" />
+              Export Data
+            </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
